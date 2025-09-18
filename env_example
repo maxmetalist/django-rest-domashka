@@ -1,0 +1,7 @@
+SECRET_KEY=your_secret_key_from_settngs.py
+
+DATABASE_NAME=your_bd_name
+DATABASE_USER=your_user_name
+DATABASE_PASSWORD=your_bd_password
+DATABASE_HOST=localhost
+DATABASE_PORT=5432
