@@ -1,10 +1,11 @@
+from django.db.models import Count
 from rest_framework import viewsets, generics
-from .models import Course, Lesson
-from .serializers import CourseSerializer, LessonSerializer
+from materials.models import Course, Lesson
+from materials.serializers import CourseSerializer, LessonSerializer
 
 class CourseViewSet(viewsets.ModelViewSet):
     """Контроллер курсов через ViewSet"""
-    queryset = Course.objects.all()
+    queryset = Course.objects.annotate(lessons_count=Count('lessons'))
     serializer_class = CourseSerializer
 
 
