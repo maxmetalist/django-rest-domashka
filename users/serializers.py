@@ -10,35 +10,42 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'last_name', 'phone', 'city', 'avatar')
-        read_only_fields = ('email',)  # email нельзя менять через этот эндпоинт
+        fields = ("id", "email", "first_name", "last_name", "phone", "city", "avatar")
+        read_only_fields = ("email",)  # email нельзя менять через этот эндпоинт
 
 
 class CourseShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
-        fields = ['id', 'title']
+        fields = ["id", "title"]
 
 
 class LessonShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lesson
-        fields = ['id', 'title']
+        fields = ["id", "title"]
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    paid_course_detail = CourseShortSerializer(source='paid_course', read_only=True)
-    paid_lesson_detail = LessonShortSerializer(source='paid_lesson', read_only=True)
-    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    paid_course_detail = CourseShortSerializer(source="paid_course", read_only=True)
+    paid_lesson_detail = LessonShortSerializer(source="paid_lesson", read_only=True)
+    payment_method_display = serializers.CharField(source="get_payment_method_display", read_only=True)
 
     class Meta:
         model = Payment
         fields = [
-            'id', 'user', 'payment_date', 'paid_course', 'paid_lesson',
-            'paid_course_detail', 'paid_lesson_detail', 'amount',
-            'payment_method', 'payment_method_display'
+            "id",
+            "user",
+            "payment_date",
+            "paid_course",
+            "paid_lesson",
+            "paid_course_detail",
+            "paid_lesson_detail",
+            "amount",
+            "payment_method",
+            "payment_method_display",
         ]
-        read_only_fields = ['user', 'payment_date']
+        read_only_fields = ["user", "payment_date"]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -46,35 +53,33 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
-            'id', 'email', 'phone', 'city', 'avatar',
-            'first_name', 'last_name', 'payment_history'
-        ]
-        read_only_fields = ['id', 'email']
+        fields = ["id", "email", "phone", "city", "avatar", "first_name", "last_name", "payment_history"]
+        read_only_fields = ["id", "email"]
 
     def get_payment_history(self, obj):
         # Получаем платежи пользователя, отсортированные по дате
-        payments = Payment.objects.filter(user=obj).order_by('-payment_date')
+        payments = Payment.objects.filter(user=obj).order_by("-payment_date")
         return PaymentSerializer(payments, many=True).data
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """Открытый сериализатор для регистрации"""
-    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
-    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+
+    password = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={"input_type": "password"})
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'password_confirm', 'first_name', 'last_name', 'phone', 'city')
+        fields = ("email", "password", "password_confirm", "first_name", "last_name", "phone", "city")
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        password = validated_data.pop('password')
+        validated_data.pop("password_confirm")
+        password = validated_data.pop("password")
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
@@ -83,24 +88,23 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 class UserPublicSerializer(serializers.ModelSerializer):
     """Сериализатор для публичного просмотра чужого профиля"""
+
     class Meta:
         model = User
-        fields = ('id', 'email', 'first_name', 'phone', 'city', 'avatar')
+        fields = ("id", "email", "first_name", "phone", "city", "avatar")
         read_only_fields = fields
 
 
 class UserPrivateSerializer(serializers.ModelSerializer):
     """Сериализатор для приватного просмотра своего профиля"""
+
     payment_history = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = [
-            'id', 'email', 'phone', 'city', 'avatar',
-            'first_name', 'last_name', 'payment_history'
-        ]
-        read_only_fields = ['id', 'email']
+        fields = ["id", "email", "phone", "city", "avatar", "first_name", "last_name", "payment_history"]
+        read_only_fields = ["id", "email"]
 
     def get_payment_history(self, obj):
-        payments = Payment.objects.filter(user=obj).order_by('-payment_date')
+        payments = Payment.objects.filter(user=obj).order_by("-payment_date")
         return PaymentSerializer(payments, many=True).data
