@@ -7,7 +7,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Создает тестовые платежи'
+    help = "Создает тестовые платежи"
 
     def handle(self, *args, **options):
         # Получаем первого пользователя, курс и урок
@@ -16,42 +16,18 @@ class Command(BaseCommand):
         lesson = Lesson.objects.first()
 
         if not user:
-            self.stdout.write(self.style.ERROR('Нет пользователей в базе данных'))
+            self.stdout.write(self.style.ERROR("Нет пользователей в базе данных"))
             return
 
         payments_data = [
-            {
-                'user': user,
-                'paid_course': course,
-                'paid_lesson': None,
-                'amount': 10000,
-                'payment_method': 'transfer'
-            },
-            {
-                'user': user,
-                'paid_course': None,
-                'paid_lesson': lesson,
-                'amount': 2500,
-                'payment_method': 'cash'
-            },
-            {
-                'user': user,
-                'paid_course': course,
-                'paid_lesson': None,
-                'amount': 15000,
-                'payment_method': 'transfer'
-            }
+            {"user": user, "paid_course": course, "paid_lesson": None, "amount": 10000, "payment_method": "transfer"},
+            {"user": user, "paid_course": None, "paid_lesson": lesson, "amount": 2500, "payment_method": "cash"},
+            {"user": user, "paid_course": course, "paid_lesson": None, "amount": 15000, "payment_method": "transfer"},
         ]
 
         for payment_data in payments_data:
             payment, created = Payment.objects.get_or_create(**payment_data)
             if created:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Создан платеж: {payment.user.email} - {payment.amount} руб.'
-                    )
-                )
+                self.stdout.write(self.style.SUCCESS(f"Создан платеж: {payment.user.email} - {payment.amount} руб."))
             else:
-                self.stdout.write(
-                    self.style.WARNING(f'Платеж уже существует: {payment}')
-                )
+                self.stdout.write(self.style.WARNING(f"Платеж уже существует: {payment}"))

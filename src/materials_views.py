@@ -2,6 +2,7 @@ from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from materials.models import Course, Lesson, Subscription
 from materials.paginators import CoursePagination, LessonPagination, SubscriptionPagination
@@ -57,30 +58,83 @@ class CourseViewSet(viewsets.ModelViewSet):
         return context
 
 
-class LessonViewSet(viewsets.ModelViewSet):
-    serializer_class = LessonSerializer
-    pagination_class = LessonPagination
+# Контроллеры уроков через generic
+class LessonListAPIView(generics.ListAPIView):
+    """Списка уроков"""
 
-    def get_permissions(self):
-        if self.action == "create":
-            return [permissions.IsAuthenticated(), IsNotModerator()]
-        elif self.action == "destroy":
-            return [permissions.IsAuthenticated(), IsNotModerator(), IsOwner()]
-        elif self.action in ["update", "partial_update"]:
-            return [permissions.IsAuthenticated(), IsOwnerOrModerator()]
-        else:
-            return [permissions.IsAuthenticated()]
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = LessonPagination
 
     def get_queryset(self):
         user = self.request.user
+
+        # Модераторы видят все уроки (но только для чтения)
         if user.groups.filter(name="moderators").exists():
             return Lesson.objects.all()
-        if not user.is_authenticated:
-            return Lesson.objects.none()
+
+        # Обычные юзеры видят только свои уроки
         return Lesson.objects.filter(owner=user)
+
+    def get_serializer_context(self):
+        """Добавляем request в контекст сериализатора"""
+        context = super().get_serializer_context()
+        context.update({"request": self.request})
+        return context
+
+
+class LessonRetrieveAPIView(generics.RetrieveAPIView):
+    """Одного урока"""
+
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOrModerator]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Модераторы видят все уроки
+        if user.groups.filter(name="moderators").exists():
+            return Lesson.objects.all()
+
+        # Обычные юзеры видят только свои уроки
+        return Lesson.objects.filter(owner=user)
+
+
+class LessonCreateAPIView(generics.CreateAPIView):
+    """Для создания урока"""
+
+    queryset = Lesson.objects.all()
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated, IsNotModerator]
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+
+class LessonUpdateAPIView(generics.UpdateAPIView):
+    """Для обновления урока"""
+
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOwner]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Обычные юзеры могут редактировать только свои уроки(permission IsOwner проверит владельца)
+        return Lesson.objects.all()
+
+
+class LessonDestroyAPIView(generics.DestroyAPIView):
+    """Для удаления урока"""
+
+    serializer_class = LessonSerializer
+    permission_classes = [permissions.IsAuthenticated, IsNotModerator, IsOwner]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Обычные юзеры могут удалять только свои уроки (permisson'ы проверят владельца)
+        return Lesson.objects.filter(owner=user)
 
 
 class SubscriptionAPIView(generics.ListAPIView, generics.CreateAPIView):
@@ -119,8 +173,7 @@ class SubscriptionAPIView(generics.ListAPIView, generics.CreateAPIView):
             subscription.delete()
             return Response(
                 {
-                    "message": f'И правильно, отпишись от курса,'
-                               f'не забивай свой не окрепший детский мозг "{course.title}"'
+                    "message": f'И правильно, отпишись от курса, не забивай свой не окрепший детский мозг "{course.title}"'
                 },
                 status=status.HTTP_200_OK,
             )

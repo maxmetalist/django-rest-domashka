@@ -14,7 +14,9 @@ from users.serializers import (
     UserSerializer,
     PaymentSerializer,
     UserProfileSerializer,
-    UserRegistrationSerializer, UserPrivateSerializer, UserPublicSerializer
+    UserRegistrationSerializer,
+    UserPrivateSerializer,
+    UserPublicSerializer,
 )
 
 
@@ -29,11 +31,14 @@ class UserRegistrationView(APIView):
             # Создаем JWT токены
             refresh = RefreshToken.for_user(user)
 
-            return Response({
-                'user': UserSerializer(user).data,
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }, status=status.HTTP_201_CREATED)
+            return Response(
+                {
+                    "user": UserSerializer(user).data,
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -42,23 +47,18 @@ class UserLoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        password = request.data.get('password')
+        email = request.data.get("email")
+        password = request.data.get("password")
 
         user = authenticate(email=email, password=password)
 
         if user:
             refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'user': UserSerializer(user).data
-            })
+            return Response(
+                {"refresh": str(refresh), "access": str(refresh.access_token), "user": UserSerializer(user).data}
+            )
 
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        return Response({"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -67,16 +67,16 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # Разрешаем регистрацию (create) без авторизации
-        if self.action == 'create':
+        if self.action == "create":
             return [permissions.AllowAny()]
-        elif self.action in ['update', 'partial_update', 'destroy']:
+        elif self.action in ["update", "partial_update", "destroy"]:
             return [permissions.IsAuthenticated(), IsProfileOwner()]
         else:
             return [permissions.IsAuthenticated()]
 
     def get_serializer_class(self):
         """Выбираем сериализатор в зависимости от контекста"""
-        if self.action in ['retrieve', 'update', 'partial_update']:
+        if self.action in ["retrieve", "update", "partial_update"]:
             # Для своего профиля используем приватный сериализатор
             if self.get_object() == self.request.user:
                 return UserPrivateSerializer
@@ -86,13 +86,13 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         """Переопределяем для возможности просмотра любого профиля"""
-        if self.kwargs.get('pk') == 'me':
+        if self.kwargs.get("pk") == "me":
             return self.request.user
 
-        obj = get_object_or_404(User, pk=self.kwargs.get('pk'))
+        obj = get_object_or_404(User, pk=self.kwargs.get("pk"))
 
         # Для действий, требующих владения, проверяем права
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action in ["update", "partial_update", "destroy"]:
             self.check_object_permissions(self.request, obj)
 
         return obj
@@ -108,8 +108,8 @@ class PaymentViewSet(viewsets.ModelViewSet):
     serializer_class = PaymentSerializer
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = PaymentFilter
-    ordering_fields = ['payment_date']
-    ordering = ['-payment_date']
+    ordering_fields = ["payment_date"]
+    ordering = ["-payment_date"]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
@@ -126,6 +126,7 @@ class PaymentViewSet(viewsets.ModelViewSet):
 
 class UserProfileView(generics.RetrieveAPIView):
     """Профиль текущего юзера по умолчанию свой"""
+
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
