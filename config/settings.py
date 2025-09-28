@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     "phonenumber_field",
     "django_filters",
     "rest_framework_simplejwt",
+    "drf_spectacular",
+    "drf_yasg",
 ]
 
 MIDDLEWARE = [
@@ -41,6 +43,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -68,6 +71,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_PAGINATION_CLASS": "materials.paginators.StandardResultsSetPagination",
     "PAGE_SIZE": 10,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
 
@@ -76,6 +80,13 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'LMS Онлайн курсы',
+    'DESCRIPTION': 'Платформа для размещения курсов и уроков',
+    'VERSION': '1.0.0',
 }
 
 
@@ -126,3 +137,17 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = "users.User"
+
+CORS_ALLOWED_ORIGINS = [
+    "<http://localhost:8000>",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "<http://localhost:8000>",
+]
+
+CORS_ALLOW_ALL_ORIGINS = False
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')

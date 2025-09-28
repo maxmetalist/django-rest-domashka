@@ -1,12 +1,21 @@
+import stripe
+from django.conf import settings
 from django.db.models import Count
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from rest_framework import viewsets, generics, permissions, status
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 
 from materials.models import Course, Lesson, Subscription
 from materials.paginators import CoursePagination, LessonPagination, SubscriptionPagination
-from materials.serializers import CourseSerializer, LessonSerializer, SubscriptionSerializer
+from materials.serializers import CourseSerializer, LessonSerializer, SubscriptionSerializer, PaymentSerializer, \
+    CreatePaymentSerializer
 from materials.permissions import IsOwnerOrModerator, IsNotModerator, IsOwner
+from materials.services.stripe_service import StripeService
+from users.models import Payment
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -55,6 +64,58 @@ class CourseViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context.update({"request": self.request})
         return context
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def create_payment_session(self, request, pk=None):
+        """Создание сессии оплаты для курса"""
+        course = self.get_object()
+
+        serializer = CreatePaymentSerializer(data=request.data)
+        if serializer.is_valid():
+            # Если у курса нет Stripe product/price, создаем их
+            if not course.stripe_product_id or not course.stripe_price_id:
+                product = StripeService.create_product(
+                    name=course.title,
+                    description=course.description or f"Курс {course.title}"
+                )
+
+                price = StripeService.create_price(
+                    product_id=product.id,
+                    amount=course.price
+                )
+
+                course.stripe_product_id = product.id
+                course.stripe_price_id = price.id
+                course.save()
+
+            success_url = serializer.validated_data['success_url']
+            cancel_url = serializer.validated_data['cancel_url']
+
+            session = StripeService.create_checkout_session(
+                price_id=course.stripe_price_id,
+                success_url=success_url,
+                cancel_url=cancel_url,
+                metadata={
+                    'course_id': str(course.id),
+                    'user_id': str(request.user.id)
+                }
+            )
+
+            # Создаем запись о платеже
+            payment = Payment.objects.create(
+                user=request.user,
+                course=course,
+                stripe_session_id=session.id,
+                amount=course.price
+            )
+
+            return Response({
+                'session_id': session.id,
+                'url': session.url,
+                'payment_id': payment.id
+            })
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class LessonViewSet(viewsets.ModelViewSet):
@@ -148,3 +209,65 @@ class SubscriptionDetailAPIView(generics.DestroyAPIView):
         course_title = subscription.course.title
         subscription.delete()
         return Response({"message": f'Вы отписались от курса "{course_title}"'}, status=status.HTTP_200_OK)
+
+
+class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
+    """Просмотр истории платежей"""
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PaymentSerializer
+    pagination_class = LessonPagination  # Можно использовать существующий пагинатор
+
+    def get_queryset(self):
+        return Payment.objects.filter(user=self.request.user)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def payment_status(request, payment_id):
+    """Проверка статуса платежа"""
+    payment = get_object_or_404(Payment, id=payment_id, user=request.user)
+
+    # Обновляем статус из Stripe
+    session = StripeService.get_session(payment.stripe_session_id)
+
+    if session.payment_status == 'paid' and payment.status != 'completed':
+        payment.status = 'completed'
+        payment.save()
+
+    serializer = PaymentSerializer(payment)
+    return Response(serializer.data)
+
+
+@csrf_exempt
+@require_POST
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+
+    try:
+        event = stripe.Webhook.construct_event(
+            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError as e:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError as e:
+        return HttpResponse(status=400)
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+
+        try:
+            payment = Payment.objects.get(stripe_session_id=session.id)
+            payment.status = 'completed'
+            payment.save()
+
+            # Автоматически создаем подписку при успешной оплате
+            Subscription.objects.get_or_create(
+                user=payment.user,
+                course=payment.course
+            )
+
+        except Payment.DoesNotExist:
+            pass
+
+    return HttpResponse(status=200)

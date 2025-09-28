@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.db import models
 
+User = settings.AUTH_USER_MODEL
+
 
 class Course(models.Model):
     title = models.CharField(max_length=150, verbose_name="Название")
@@ -9,6 +11,10 @@ class Course(models.Model):
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Владелец"
     )
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    stripe_product_id = models.CharField(max_length=255, blank=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["id"]
