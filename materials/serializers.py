@@ -1,6 +1,8 @@
 from rest_framework import serializers
+
 from materials.models import Course, Lesson, Subscription
 from materials.validators import YouTubeURLValidator
+from users.models import Payment
 
 
 class LessonSerializer(serializers.ModelSerializer):
@@ -45,7 +47,7 @@ class CourseSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
             return Subscription.objects.filter(user=request.user, course=obj).exists()
-        return False
+        return
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
@@ -58,3 +60,20 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         model = Subscription
         fields = ["id", "user", "course", "subscribed_at", "course_title", "user_email"]
         read_only_fields = ["user", "subscribed_at"]
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    course_title = serializers.CharField(source='course.title', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'user', 'course', 'course_title', 'user_email',
+                  'stripe_session_id', 'amount', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
+
+
+class CreatePaymentSerializer(serializers.Serializer):
+    course_id = serializers.IntegerField()
+    success_url = serializers.URLField(default='http://localhost:8000/success/')
+    cancel_url = serializers.URLField(default='http://localhost:8000/cancel/')
