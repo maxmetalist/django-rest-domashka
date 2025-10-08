@@ -16,6 +16,7 @@ from materials.serializers import CourseSerializer, LessonSerializer, Subscripti
 from materials.permissions import IsOwnerOrModerator, IsNotModerator, IsOwner
 from materials.services.stripe_service import StripeService
 from users.models import Payment
+from utils import should_send_notification
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -117,6 +118,28 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def send_update_notification(self, request, pk=None, send_course_update_notification=None):
+        """
+        Ручной вызов отправки уведомлений об обновлении курса
+        """
+        course = self.get_object()
+
+        # Проверяем права - только владелец курса может отправлять уведомления
+        if course.owner != request.user:
+            return Response(
+                {"error": "У вас нет прав для отправки уведомлений по этому курсу"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Отправляем задачу в Celery
+        task_result = send_course_update_notification.delay(course.id)
+
+        return Response({
+            "message": "Уведомления отправляются подписчикам",
+            "task_id": task_result.id
+        }, status=status.HTTP_200_OK)
+
 
 class LessonViewSet(viewsets.ModelViewSet):
     serializer_class = LessonSerializer
@@ -142,6 +165,32 @@ class LessonViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def update(self, request, send_course_update_notification=None, *args, **kwargs):
+        """
+        Обновление урока с проверкой на отправку уведомлений
+        """
+        response = super().update(request, *args, **kwargs)
+
+        if response.status_code == status.HTTP_200_OK:
+            lesson = self.get_object()
+            course = lesson.course
+
+            # Проверяем, нужно ли отправлять уведомление
+            if should_send_notification(course, threshold_hours=4):
+                # Отправляем задачу в Celery
+                send_course_update_notification.delay(
+                    course_id=course.id,
+                    updated_lesson_title=lesson.title
+                )
+
+        return response
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Частичное обновление урока с проверкой на отправку уведомлений
+        """
+        return self.update(request, *args, **kwargs)
 
 
 class SubscriptionAPIView(generics.ListAPIView, generics.CreateAPIView):

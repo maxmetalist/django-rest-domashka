@@ -15,6 +15,7 @@ class Course(models.Model):
     stripe_product_id = models.CharField(max_length=255, blank=True)
     stripe_price_id = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата последнего обновления")
 
     class Meta:
         ordering = ["id"]
