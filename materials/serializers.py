@@ -63,17 +63,27 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
-    course_title = serializers.CharField(source='course.title', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
+    course_title = serializers.CharField(source="course.title", read_only=True)
+    user_email = serializers.CharField(source="user.email", read_only=True)
 
     class Meta:
         model = Payment
-        fields = ['id', 'user', 'course', 'course_title', 'user_email',
-                  'stripe_session_id', 'amount', 'status', 'created_at', 'updated_at']
-        read_only_fields = ['user', 'created_at', 'updated_at']
+        fields = [
+            "id",
+            "user",
+            "course",
+            "course_title",
+            "user_email",
+            "stripe_session_id",
+            "amount",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["user", "created_at", "updated_at"]
 
 
 class CreatePaymentSerializer(serializers.Serializer):
     course_id = serializers.IntegerField()
-    success_url = serializers.URLField(default='http://localhost:8000/success/')
-    cancel_url = serializers.URLField(default='http://localhost:8000/cancel/')
+    success_url = serializers.URLField(default="http://localhost:8000/success/")
+    cancel_url = serializers.URLField(default="http://localhost:8000/cancel/")

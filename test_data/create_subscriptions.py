@@ -1,7 +1,7 @@
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 from django.contrib.auth import get_user_model
@@ -23,10 +23,7 @@ def create_test_subscriptions():
     for user in users:
         for course in courses:
             # Создаем подписку для каждого пользователя на каждый курс
-            subscription, created = Subscription.objects.get_or_create(
-                user=user,
-                course=course
-            )
+            subscription, created = Subscription.objects.get_or_create(user=user, course=course)
 
             if created:
                 created_count += 1

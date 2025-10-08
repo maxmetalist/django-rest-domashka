@@ -16,7 +16,4 @@ def check_course_update_notification(sender, instance, created, **kwargs):
         # Проверяем, нужно ли отправлять уведомление
         if should_send_notification(course, threshold_hours=4):
             # Отправляем задачу в Celery
-            send_course_update_notification.delay(
-                course_id=course.id,
-                updated_lesson_title=instance.title
-            )
+            send_course_update_notification.delay(course_id=course.id, updated_lesson_title=instance.title)
