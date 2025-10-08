@@ -14,11 +14,12 @@ def send_course_update_notification(course_id, updated_lesson_title=None):
     # Ленивые импорты спецом сюда внесены, чтобы избежать циклизации
     from materials.models import Subscription, Course
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
 
     try:
         course = Course.objects.get(id=course_id)
-        subscriptions = Subscription.objects.filter(course=course).select_related('user')
+        subscriptions = Subscription.objects.filter(course=course).select_related("user")
 
         if not subscriptions:
             return f"Нет подписанных аленей на курс: {course.title}"
@@ -80,6 +81,7 @@ def deactivate_inactive_users():
     """
     # ленивые импорты спецом внесены сюда, чтобы избежать циклизации
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
 
     try:
@@ -87,10 +89,7 @@ def deactivate_inactive_users():
         threshold_date = timezone.now() - timedelta(days=30)
 
         # Находим пользователей, которые не заходили более месяца и еще активны
-        inactive_users = User.objects.filter(
-            last_login__lt=threshold_date,
-            is_active=True
-        )
+        inactive_users = User.objects.filter(last_login__lt=threshold_date, is_active=True)
 
         count_before = inactive_users.count()
 

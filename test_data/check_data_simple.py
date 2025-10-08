@@ -1,7 +1,7 @@
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
 from django.contrib.auth import get_user_model
@@ -28,7 +28,7 @@ def check_existing_data():
         print(f"  - '{course.title}' (ID: {course.id}) - подписчиков: {subs.count()}")
 
     # Подписки
-    subscriptions = Subscription.objects.all().select_related('user', 'course')
+    subscriptions = Subscription.objects.all().select_related("user", "course")
     print(f"📧 Всего подписок: {subscriptions.count()}")
     for sub in subscriptions:
         print(f"  - {sub.user.email} -> '{sub.course.title}'")

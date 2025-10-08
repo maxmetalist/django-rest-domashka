@@ -11,8 +11,13 @@ from rest_framework.response import Response
 
 from materials.models import Course, Lesson, Subscription
 from materials.paginators import CoursePagination, LessonPagination, SubscriptionPagination
-from materials.serializers import CourseSerializer, LessonSerializer, SubscriptionSerializer, PaymentSerializer, \
-    CreatePaymentSerializer
+from materials.serializers import (
+    CourseSerializer,
+    LessonSerializer,
+    SubscriptionSerializer,
+    PaymentSerializer,
+    CreatePaymentSerializer,
+)
 from materials.permissions import IsOwnerOrModerator, IsNotModerator, IsOwner
 from materials.services.stripe_service import StripeService
 from users.models import Payment
@@ -66,7 +71,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         context.update({"request": self.request})
         return context
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
     def create_payment_session(self, request, pk=None):
         """Создание сессии оплаты для курса"""
         course = self.get_object()
@@ -76,49 +81,35 @@ class CourseViewSet(viewsets.ModelViewSet):
             # Если у курса нет Stripe product/price, создаем их
             if not course.stripe_product_id or not course.stripe_price_id:
                 product = StripeService.create_product(
-                    name=course.title,
-                    description=course.description or f"Курс {course.title}"
+                    name=course.title, description=course.description or f"Курс {course.title}"
                 )
 
-                price = StripeService.create_price(
-                    product_id=product.id,
-                    amount=course.price
-                )
+                price = StripeService.create_price(product_id=product.id, amount=course.price)
 
                 course.stripe_product_id = product.id
                 course.stripe_price_id = price.id
                 course.save()
 
-            success_url = serializer.validated_data['success_url']
-            cancel_url = serializer.validated_data['cancel_url']
+            success_url = serializer.validated_data["success_url"]
+            cancel_url = serializer.validated_data["cancel_url"]
 
             session = StripeService.create_checkout_session(
                 price_id=course.stripe_price_id,
                 success_url=success_url,
                 cancel_url=cancel_url,
-                metadata={
-                    'course_id': str(course.id),
-                    'user_id': str(request.user.id)
-                }
+                metadata={"course_id": str(course.id), "user_id": str(request.user.id)},
             )
 
             # Создаем запись о платеже
             payment = Payment.objects.create(
-                user=request.user,
-                course=course,
-                stripe_session_id=session.id,
-                amount=course.price
+                user=request.user, course=course, stripe_session_id=session.id, amount=course.price
             )
 
-            return Response({
-                'session_id': session.id,
-                'url': session.url,
-                'payment_id': payment.id
-            })
+            return Response({"session_id": session.id, "url": session.url, "payment_id": payment.id})
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
     def send_update_notification(self, request, pk=None, send_course_update_notification=None):
         """
         Ручной вызов отправки уведомлений об обновлении курса
@@ -128,17 +119,15 @@ class CourseViewSet(viewsets.ModelViewSet):
         # Проверяем права - только владелец курса может отправлять уведомления
         if course.owner != request.user:
             return Response(
-                {"error": "У вас нет прав для отправки уведомлений по этому курсу"},
-                status=status.HTTP_403_FORBIDDEN
+                {"error": "У вас нет прав для отправки уведомлений по этому курсу"}, status=status.HTTP_403_FORBIDDEN
             )
 
         # Отправляем задачу в Celery
         task_result = send_course_update_notification.delay(course.id)
 
-        return Response({
-            "message": "Уведомления отправляются подписчикам",
-            "task_id": task_result.id
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Уведомления отправляются подписчикам", "task_id": task_result.id}, status=status.HTTP_200_OK
+        )
 
 
 class LessonViewSet(viewsets.ModelViewSet):
@@ -179,10 +168,7 @@ class LessonViewSet(viewsets.ModelViewSet):
             # Проверяем, нужно ли отправлять уведомление
             if should_send_notification(course, threshold_hours=4):
                 # Отправляем задачу в Celery
-                send_course_update_notification.delay(
-                    course_id=course.id,
-                    updated_lesson_title=lesson.title
-                )
+                send_course_update_notification.delay(course_id=course.id, updated_lesson_title=lesson.title)
 
         return response
 
@@ -229,8 +215,8 @@ class SubscriptionAPIView(generics.ListAPIView, generics.CreateAPIView):
             subscription.delete()
             return Response(
                 {
-                    "message": f'И правильно, отпишись от курса,'
-                               f'не забивай свой не окрепший детский мозг "{course.title}"'
+                    "message": f"И правильно, отпишись от курса,"
+                    f'не забивай свой не окрепший детский мозг "{course.title}"'
                 },
                 status=status.HTTP_200_OK,
             )
@@ -262,6 +248,7 @@ class SubscriptionDetailAPIView(generics.DestroyAPIView):
 
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
     """Просмотр истории платежей"""
+
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = PaymentSerializer
     pagination_class = LessonPagination  # Можно использовать существующий пагинатор
@@ -270,7 +257,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return Payment.objects.filter(user=self.request.user)
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([permissions.IsAuthenticated])
 def payment_status(request, payment_id):
     """Проверка статуса платежа"""
@@ -279,8 +266,8 @@ def payment_status(request, payment_id):
     # Обновляем статус из Stripe
     session = StripeService.get_session(payment.stripe_session_id)
 
-    if session.payment_status == 'paid' and payment.status != 'completed':
-        payment.status = 'completed'
+    if session.payment_status == "paid" and payment.status != "completed":
+        payment.status = "completed"
         payment.save()
 
     serializer = PaymentSerializer(payment)
@@ -291,30 +278,25 @@ def payment_status(request, payment_id):
 @require_POST
 def stripe_webhook(request):
     payload = request.body
-    sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
     except ValueError as e:
         return HttpResponse(status=400)
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
 
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
 
         try:
             payment = Payment.objects.get(stripe_session_id=session.id)
-            payment.status = 'completed'
+            payment.status = "completed"
             payment.save()
 
             # Автоматически создаем подписку при успешной оплате
-            Subscription.objects.get_or_create(
-                user=payment.user,
-                course=payment.course
-            )
+            Subscription.objects.get_or_create(user=payment.user, course=payment.course)
 
         except Payment.DoesNotExist:
             pass
