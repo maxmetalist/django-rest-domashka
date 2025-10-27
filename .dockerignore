@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+.venv
+.env
+.git
+.coverage
+.coverage.*
+.history
+.DS_Store
+*.sqlite3
+media
+static
