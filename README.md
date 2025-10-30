@@ -89,3 +89,9 @@ Intervals - интервалы
 1. Набрать в контейнере команду
 docker-compose exec web python manage.py collectstatic --noinput
 2. Перезагрузить страницу в браузере
+## Nginx и deploy
+   Для сборки статики сделан новый файл nginx.conf
+   Слегка изменены Dockerfile и docker-compose с учётом этого
+   Для выгрузки приложения сделан файл deploy.yml. В нём спецом указаны ветки
+   и main и develop и feature для того, чтобы можно было проверить workflow
+   на гите. Иначе проверка будет возможна только после слияния веток в develop.
