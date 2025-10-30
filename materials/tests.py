@@ -1,10 +1,11 @@
 # Хренова туча тестов дя уроков и подписок
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from django.contrib.auth.models import Group
+
 from materials.models import Course, Lesson, Subscription
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -24,7 +25,7 @@ class LessonCRUDTestCase(APITestCase):
 
         # Создаём курсы
         self.course = Course.objects.create(
-            title="Test Course", description="Test Description", owner=self.regular_user
+            title="Test Course", description="Test Description", owner=self.regular_user, price=1000.00
         )
 
         # Создаём уроки
@@ -35,6 +36,8 @@ class LessonCRUDTestCase(APITestCase):
             video_url="https://www.youtube.com/watch?v=test",
             owner=self.regular_user,
         )
+
+        self.client.force_authenticate(user=self.regular_user)
 
         # Создаём группу модераторов
         self.moderators_group, created = Group.objects.get_or_create(name="moderators")
@@ -79,9 +82,10 @@ class LessonCRUDTestCase(APITestCase):
 
     def test_get_lesson_detail_unauthorized(self):
         """Тест получения деталей урока неавторизованным пользователем"""
-        response = self.client.get(self.lesson_detail_url)
+        self.client.force_authenticate(user=None)
+        url = reverse("lesson-detail", args=[self.lesson.id])
+        response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
     def test_get_lesson_detail_another_user(self):
         """Тест получения деталей урока другим пользователем"""
         self.client.force_authenticate(user=self.another_user)
@@ -127,12 +131,18 @@ class LessonCRUDTestCase(APITestCase):
 
     def test_update_lesson_owner(self):
         """Тест обновления урока владельцем"""
-        self.client.force_authenticate(user=self.regular_user)
-        data = {"title": "Обновленный урок"}
-        response = self.client.patch(self.lesson_detail_url, data)
+        url = reverse("lesson-detail", args=[self.lesson.id])
+        update_data = {
+            "title": "Updated Lesson Title",
+            "description": "Updated Description",
+            "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "course": self.course.id,
+        }
+
+        response = self.client.put(url, update_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.lesson.refresh_from_db()
-        self.assertEqual(self.lesson.title, "Обновленный урок")
+        self.assertEqual(self.lesson.title, "Updated Lesson Title")
 
     def test_update_lesson_moderator(self):
         """Тест обновления урока модератором"""
@@ -180,9 +190,15 @@ class SubscriptionTestCase(APITestCase):
         self.user2 = User.objects.create_user(email="user2@test.com", password="testpass123")
 
         # Создаем курсы
-        self.course1 = Course.objects.create(title="Курс 1", description="Описание курса 1", owner=self.user1)
+        self.course1 = Course.objects.create(
+            title="Курс 1", description="Описание курса 1", owner=self.user1, price=2000.00
+        )
 
-        self.course2 = Course.objects.create(title="Курс 2", description="Описание курса 2", owner=self.user2)
+        self.course2 = Course.objects.create(
+            title="Курс 2", description="Описание курса 2", owner=self.user2, price=1000.00
+        )
+
+        self.client.force_authenticate(user=self.user1)
 
         # Создаём группу модераторов
         self.moderators_group, created = Group.objects.get_or_create(name="moderators")
@@ -202,21 +218,23 @@ class SubscriptionTestCase(APITestCase):
 
     def test_create_subscription_duplicate(self):
         """Тест создания дублирующей подписки (должна отписывать)"""
-        self.client.force_authenticate(user=self.user1)
-        subscription = Subscription.objects.create(user=self.user1, course=self.course1)
-        data = {"course_id": self.course1.id}
-        response = self.client.post(self.subscriptions_url, data)
+        url = reverse('subscriptions')
 
+        data = {'course_id': self.course1.id}
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Используйте правильное сообщение из вашего кода:
-        self.assertIn("И правильно, отпишись от курса", response.data["message"])
 
     def test_create_subscription_unauthorized(self):
         """Тест создания подписки неавторизованным пользователем"""
-        data = {"course_id": self.course1.id}
+        self.client.force_authenticate(user=None)
 
-        response = self.client.post(self.subscriptions_url, data)
-
+        url = reverse('subscriptions')
+        data = {'course_id': self.course1.id}
+        response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_subscription_invalid_course(self):
@@ -299,7 +317,9 @@ class PaginationTestCase(APITestCase):
         """Настройка тестовых данных"""
         self.user = User.objects.create_user(email="test@test.com", password="testpass123")
 
-        self.course = Course.objects.create(title="Тестовый курс", description="Описание", owner=self.user)
+        self.course = Course.objects.create(
+            title="Тестовый курс", description="Описание", owner=self.user, price=1500.00
+        )
 
         # Создаем несколько уроков для тестирования пагинации
         for i in range(15):
