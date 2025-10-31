@@ -1,22 +1,22 @@
+from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets, permissions, generics, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
 
 from users.filters import PaymentFilter
-from users.models import User, Payment
+from users.models import Payment, User
 from users.permissions import IsProfileOwner
 from users.serializers import (
-    UserSerializer,
     PaymentSerializer,
-    UserProfileSerializer,
-    UserRegistrationSerializer,
     UserPrivateSerializer,
+    UserProfileSerializer,
     UserPublicSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
 )
 
 

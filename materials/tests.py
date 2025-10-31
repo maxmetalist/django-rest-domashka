@@ -86,6 +86,7 @@ class LessonCRUDTestCase(APITestCase):
         url = reverse("lesson-detail", args=[self.lesson.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_get_lesson_detail_another_user(self):
         """Тест получения деталей урока другим пользователем"""
         self.client.force_authenticate(user=self.another_user)
@@ -218,23 +219,23 @@ class SubscriptionTestCase(APITestCase):
 
     def test_create_subscription_duplicate(self):
         """Тест создания дублирующей подписки (должна отписывать)"""
-        url = reverse('subscriptions')
+        url = reverse("subscriptions")
 
-        data = {'course_id': self.course1.id}
+        data = {"course_id": self.course1.id}
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_create_subscription_unauthorized(self):
         """Тест создания подписки неавторизованным пользователем"""
         self.client.force_authenticate(user=None)
 
-        url = reverse('subscriptions')
-        data = {'course_id': self.course1.id}
-        response = self.client.post(url, data, format='json')
+        url = reverse("subscriptions")
+        data = {"course_id": self.course1.id}
+        response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_create_subscription_invalid_course(self):

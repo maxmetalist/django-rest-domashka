@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 from celery import shared_task
-from django.core.mail import send_mail
 from django.conf import settings
+from django.core.mail import send_mail
 from django.utils import timezone
 
 
@@ -12,10 +12,7 @@ def send_course_update_notification(course_id, updated_lesson_title=None):
     Задача для отправки уведомлений об обновлении курса подписчикам
     """
     # Ленивые импорты спецом сюда внесены, чтобы избежать циклизации
-    from materials.models import Subscription, Course
-    from django.contrib.auth import get_user_model
-
-    User = get_user_model()
+    from materials.models import Course, Subscription
 
     try:
         course = Course.objects.get(id=course_id)
@@ -38,7 +35,6 @@ def send_course_update_notification(course_id, updated_lesson_title=None):
 
             Понравится, ну приколдесно!
             Не понравится, ну облом...
-            
             Это был Масяма, удачи тебе!
             """
         else:
@@ -52,7 +48,6 @@ def send_course_update_notification(course_id, updated_lesson_title=None):
 
             Понравится, ну приколдесно!
             Не понравится, ну облом...
-            
             Это был Масяма, удачи тебе!
             """
 

@@ -1,6 +1,7 @@
 import django_filters
-from users.models import Payment
+
 from materials.models import Course, Lesson
+from users.models import Payment
 
 
 class PaymentFilter(django_filters.FilterSet):

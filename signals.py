@@ -1,7 +1,9 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+
 from materials.models import Lesson
 from materials.tasks import send_course_update_notification
+
 from .utils import should_send_notification
 
 

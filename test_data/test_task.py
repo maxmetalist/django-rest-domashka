@@ -1,10 +1,10 @@
 import os
+
 import django
+from materials.tasks import send_course_update_notification
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
-
-from materials.tasks import send_course_update_notification
 
 # Тестируем задачу
 try:

@@ -1,8 +1,8 @@
+from phonenumber_field.serializerfields import PhoneNumberField
 from rest_framework import serializers
 
 from materials.models import Course, Lesson
-from users.models import User, Payment
-from phonenumber_field.serializerfields import PhoneNumberField
+from users.models import Payment, User
 
 
 class UserSerializer(serializers.ModelSerializer):

@@ -1,12 +1,12 @@
 import os
-import django
 import time
+
+import django
+from materials.models import Course
+from materials.tasks import send_course_update_notification
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
-
-from materials.tasks import send_course_update_notification
-from materials.models import Course
 
 
 def test_email_task():
@@ -48,7 +48,7 @@ def test_email_task():
             if task.ready():
                 result = task.get()
                 status = task.status
-                print(f"🎉 Задача завершена!")
+                print("🎉 Задача завершена!")
                 print(f"📊 Статус: {status}")
                 print(f"📨 Результат: {result}")
                 break

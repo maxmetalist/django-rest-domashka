@@ -1,5 +1,6 @@
-from django.utils import timezone
 from datetime import timedelta
+
+from django.utils import timezone
 
 
 def should_send_notification(course, threshold_hours=4):

@@ -5,20 +5,20 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from rest_framework import viewsets, generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework import generics, permissions, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 
 from materials.models import Course, Lesson, Subscription
 from materials.paginators import CoursePagination, LessonPagination, SubscriptionPagination
+from materials.permissions import IsNotModerator, IsOwner, IsOwnerOrModerator
 from materials.serializers import (
     CourseSerializer,
-    LessonSerializer,
-    SubscriptionSerializer,
-    PaymentSerializer,
     CreatePaymentSerializer,
+    LessonSerializer,
+    PaymentSerializer,
+    SubscriptionSerializer,
 )
-from materials.permissions import IsOwnerOrModerator, IsNotModerator, IsOwner
 from materials.services.stripe_service import StripeService
 from users.models import Payment
 from utils import should_send_notification
@@ -282,9 +282,9 @@ def stripe_webhook(request):
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
-    except ValueError as e:
+    except ValueError:
         return HttpResponse(status=400)
-    except stripe.error.SignatureVerificationError as e:
+    except stripe.error.SignatureVerificationError:
         return HttpResponse(status=400)
 
     if event["type"] == "checkout.session.completed":
