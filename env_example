@@ -1,0 +1,35 @@
+SECRET_KEY=your_secret_key_from_settngs.py
+DEBUG=False # Для запуска в Docker оставить True, для локального запуска изменить на False
+ALLOWED_HOSTS=localhost,127.0.0.1,web
+
+DATABASE_NAME=your_bd_name
+DATABASE_USER=your_user_name
+DATABASE_PASSWORD=your_bd_password
+DATABASE_HOST=db # Для Docker установите db, для локального запуска localhost
+DATABASE_PORT=5432 # Этот порт у меня используется по умолчанию. Измените на порт, используемый в вашей БД.
+
+STRIPE_SECRET_KEY=sk_test_your_secret_key
+STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Настройки stripe
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# Переменные для celery и redis
+REDIS_URL=redis://redis:6379/0
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Настройки Email
+EMAIL_HOST=smtp.mail.ru
+EMAIL_PORT=2525
+EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
+EMAIL_HOST_USER=your_email_address
+EMAIL_HOST_PASSWORD=your_app_password_in_Email
+DEFAULT_FROM_EMAIL=your_email_address
+
+# Docker
+DOCKER_CONTAINER=True # Для запуска в Docker установите True, для локального запуска False
